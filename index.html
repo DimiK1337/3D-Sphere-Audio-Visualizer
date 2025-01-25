@@ -15,6 +15,48 @@
             display: none; /* Hide the iframe */
         }
 
+        #input-container {
+            margin: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            left: 0;
+            scroll-behavior: smooth;
+        }
+
+        input {
+            padding: 10px;
+            width: 300px;
+            font-size: 16px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Audio control bar */
+        #audio-controls {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        #audio-controls button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            margin: 0 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -22,12 +64,27 @@
     <!-- YouTube IFrame API Script -->
     <script src="https://www.youtube.com/iframe_api"></script>
 
+    <!-- Input bar for YouTube link -->
+    <div id="input-container">
+        <input 
+            id="youtube-link" type="text" 
+            placeholder="Paste YouTube URL here... (e.g: https://www.youtube.com/watch?v=sIwfYvruKKM)" 
+            value="https://www.youtube.com/watch?v=sIwfYvruKKM"
+        />
+        <button id="fetch-audio">Fetch Audio</button>
+    </div>
+
     <!-- YouTube Video Container -->
     <div id="player">
         <div id="youtube-video"></div>
     </div>
     <div id="visualizer"></div>
-    
+
+    <!-- Audio controls -->
+    <div id="audio-controls">
+        <button id="play-pause">▶</button>
+    </div>
+
     <!-- Main JavaScript -->
     <script type="module" src="./main.js"></script>
 </body>
