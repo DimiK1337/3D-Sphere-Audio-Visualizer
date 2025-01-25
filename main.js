@@ -7,8 +7,12 @@ import { OutputPass } from 'three/examples/jsm/Addons.js';
 
 import { GUI } from 'lil-gui';
 
-const params = {
+import { vertexShader } from './scripts/shaders/vertexShader';
+import { fragmentShader } from './scripts/shaders/fragmentShader';
 
+const scene = new THREE.Scene();
+
+const params = {
     red: 1.0,
     green: 1.0,
     blue: 1.0,
@@ -21,12 +25,10 @@ const params = {
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
 
-// Sets the color of the background.
-// renderer.setClearColor(0xfefefe);
+const visualizer_canvas = document.getElementById('visualizer');
+visualizer_canvas.appendChild(renderer.domElement);
 
-const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
     45, // FOV
     window.innerWidth / window.innerHeight, // Aspect ratio
@@ -46,8 +48,6 @@ orbit.update();
 const uniforms = {
     u_time: { value: 0.0 },
     u_frequency: { value: 0.0 },
-
-
     u_red: { value: params.red },
     u_green: { value: params.green },
     u_blue: { value: params.blue },
@@ -57,9 +57,10 @@ const uniforms = {
 const mat = new THREE.ShaderMaterial({
     wireframe: true,
     uniforms: uniforms,
-    vertexShader: document.getElementById('vertexShader').textContent,
-    fragmentShader: document.getElementById('fragmentShader').textContent,
+    vertexShader: vertexShader,
+    fragmentShader: fragmentShader
 });
+
 const geometry = new THREE.IcosahedronGeometry(4, 30); // Radius is 4, detail is what makes it smooth.
 const mesh = new THREE.Mesh(geometry, mat); 
 scene.add(mesh);
@@ -69,22 +70,108 @@ scene.add(mesh);
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
-const sound = new THREE.Audio(listener);
 
+/*
+const sound = new THREE.Audio(listener);
 const file_name = '/franchise_remix.mp3';
 const audio_loader = new THREE.AudioLoader();
-audio_loader.load(file_name, (buffer) => {
+audio_loader.load(file_name + "ERROR", (buffer) => {
     sound.setBuffer(buffer);
+
+    const toggleSound = () => {
+        sound.isPlaying ? sound.pause() : sound.play();
+    };
+
+    let clientClickX;
+    let clientClickY;
+    let dragging = false;
+    window.addEventListener('mousedown', (event) => {
+        clientClickX = event.clientX;
+        clientClickY = event.clientY;
+    });
+
+    window.addEventListener('mouseup', (event) => {
+        dragging = !(clientClickX === event.clientX && clientClickY === event.clientY);
+    });
+
     window.addEventListener('click', (event) => {
         if (event.target.tagName !== 'CANVAS') return;
-        console.log(event)
-        sound.isPlaying ? sound.pause() : sound.play();
+        if (dragging) return;
+        toggleSound();
     });
+
+    
 });
+*/
 
 // Analysis of the audio.
 const fft_size = 32; // Number of bins to analyze the audio frequencies.
-const analyser = new THREE.AudioAnalyser(sound, fft_size);
+//const analyser = new THREE.AudioAnalyser(sound, fft_size);
+let analyser;
+
+// TEMP SECTION: Play Youtube videos.
+
+// Explicitly set the onYouTubeIframeAPIReady function as a global property of window
+let youtubePlayer;
+const youTubeVideoID = "sIwfYvruKKM";
+
+let audioContext, frequencyData;
+
+window.onYouTubeIframeAPIReady = function () {
+    console.log('YouTube API is ready');
+    youtubePlayer = new YT.Player('youtube-video', {
+        height: '0', // Hides the video display
+        width: '0',
+        videoId: youTubeVideoID, // Replace with your desired YouTube video ID
+        events: {
+            onReady: (event) => {
+                console.log('YouTube Player is ready');
+                event.target.playVideo();
+                initializeAudio();
+            },
+            onError: (event) => {
+                console.error('YouTube Player error:', event.data);
+            },
+        },
+    });
+};
+
+YT.ready(function () {
+    console.log("YT.ready triggered");
+    youtubePlayer = new YT.Player("youtube-video", {
+        height: "0",
+        width: "0",
+        videoId: "sIwfYvruKKM",
+        events: {
+            onReady: (event) => {
+                console.log("YouTube Player is ready via YT.ready");
+                event.target.playVideo();
+                initializeAudio();
+            },
+        },
+    });
+});
+
+
+
+function initializeAudio() {
+    console.log('Initializing Audio');
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Extract audio from the YouTube iframe
+    const mediaElement = youtubePlayer.getIframe();
+    const mediaElementSource = audioContext.createMediaElementSource(mediaElement);
+
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+    frequencyData = new Uint8Array(analyser.frequencyBinCount);
+
+    mediaElementSource.connect(analyser);
+    analyser.connect(audioContext.destination);
+    console.log('Audio initialized');
+}
+
+
 
 // Post processing.
 
@@ -144,7 +231,12 @@ bloomFolder.add(params, 'radius', 0.0, 2.0).onChange((value) => {
 const clock = new THREE.Clock();
 
 function animate() { 
-    uniforms.u_frequency.value = analyser.getAverageFrequency();
+    //uniforms.u_frequency.value = analyser.getAverageFrequency();
+    if (analyser) {
+        analyser.getByteFrequencyData(frequencyData);
+        const averageFrequency = frequencyData.reduce((a, b) => a + b) / frequencyData.length;
+        uniforms.u_frequency.value = averageFrequency;
+    }
 
     uniforms.u_time.value = clock.getElapsedTime();
     //renderer.render(scene, camera);
