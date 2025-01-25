@@ -162,7 +162,7 @@ const toggleAudio = () => {
     }
     //audio.isPlaying ? audio.pause() : audio.play();
     audio.paused ? audio.play() : audio.pause();
-    button.textContent = !audio.paused ? '⏸' : '▶';
+    button.textContent = audio && !audio.paused ? '⏸' : '▶';
 };
 
 document.getElementById('fetch-audio').addEventListener('click', async () => {
@@ -177,7 +177,7 @@ document.getElementById('fetch-audio').addEventListener('click', async () => {
 
     await playAudio(videoId);
     const button = document.getElementById('play-pause');
-    button.textContent = !audio.paused ? '⏸' : '▶';
+    button.textContent = audio && !audio.paused ? '⏸' : '▶';
 });
 
 document.getElementById('play-pause').addEventListener('click', toggleAudio);
