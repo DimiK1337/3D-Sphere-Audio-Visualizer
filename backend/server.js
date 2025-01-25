@@ -22,7 +22,7 @@ app.post('/download-audio', async (req, res) => {
 
     // yt-dlp command to download audio
     // Audio quality 0 is the highest quality, 1 is the 2nd highest, and so on until 9
-    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 --audio-bitrate 320k -o ${outputPath} https://www.youtube.com/watch?v=${videoId}`;
+    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 -o ${outputPath} https://www.youtube.com/watch?v=${videoId}`;
 
     exec(command, (error, stdout, stderr) => {
         if (error) {
