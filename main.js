@@ -34,13 +34,23 @@ const camera = new THREE.PerspectiveCamera(
     1000 // Far clipping plane
 );
 
-// Sets orbit control to move the camera around.
-const orbit = new OrbitControls(camera, renderer.domElement);
+// Sets orbit control to move the camera around and zoom in.
+//const orbit = new OrbitControls(camera, renderer.domElement);
 
 // Camera positioning.
 camera.position.set(6, 8, 14);
 // Has to be done everytime we update the camera position.
-orbit.update();
+
+//orbit.update();
+
+let mouseX = 0;
+let mouseY = 0;
+document.addEventListener('mousemove', function (e) {
+    let windowHalfX = window.innerWidth / 2;
+    let windowHalfY = window.innerHeight / 2;
+    mouseX = (e.clientX - windowHalfX) / 100;
+    mouseY = (e.clientY - windowHalfY) / 100;
+}); 
 
 // Uniforms are constants that are passed to the shaders for every vertex and fragment.
 const uniforms = {
@@ -144,8 +154,13 @@ bloomFolder.add(params, 'radius', 0.0, 2.0).onChange((value) => {
 const clock = new THREE.Clock();
 
 function animate() { 
-    uniforms.u_frequency.value = analyser.getAverageFrequency();
 
+    camera.position.x += (mouseX - camera.position.x) * 0.05;
+    camera.position.y += (-mouseY - camera.position.y) * 0.5;
+    camera.lookAt(scene.position); 
+
+
+    uniforms.u_frequency.value = analyser.getAverageFrequency();
     uniforms.u_time.value = clock.getElapsedTime();
     //renderer.render(scene, camera);
     bloomComposer.render();
