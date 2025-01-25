@@ -70,106 +70,133 @@ scene.add(mesh);
 const listener = new THREE.AudioListener();
 camera.add(listener);
 
-
-/*
-const sound = new THREE.Audio(listener);
-const file_name = '/franchise_remix.mp3';
-const audio_loader = new THREE.AudioLoader();
-audio_loader.load(file_name + "ERROR", (buffer) => {
-    sound.setBuffer(buffer);
-
-    const toggleSound = () => {
-        sound.isPlaying ? sound.pause() : sound.play();
-    };
-
-    let clientClickX;
-    let clientClickY;
-    let dragging = false;
-    window.addEventListener('mousedown', (event) => {
-        clientClickX = event.clientX;
-        clientClickY = event.clientY;
-    });
-
-    window.addEventListener('mouseup', (event) => {
-        dragging = !(clientClickX === event.clientX && clientClickY === event.clientY);
-    });
-
-    window.addEventListener('click', (event) => {
-        if (event.target.tagName !== 'CANVAS') return;
-        if (dragging) return;
-        toggleSound();
-    });
-
-    
-});
-*/
-
 // Analysis of the audio.
 const fft_size = 32; // Number of bins to analyze the audio frequencies.
 //const analyser = new THREE.AudioAnalyser(sound, fft_size);
 let analyser;
+let audio, audioContext, sound, audioLoader, frequencyData;
 
-// TEMP SECTION: Play Youtube videos.
+let dragging = false;
+let clientClickX, clientClickY;
 
-// Explicitly set the onYouTubeIframeAPIReady function as a global property of window
-let youtubePlayer;
-const youTubeVideoID = "sIwfYvruKKM";
-
-let audioContext, frequencyData;
-
-window.onYouTubeIframeAPIReady = function () {
-    console.log('YouTube API is ready');
-    youtubePlayer = new YT.Player('youtube-video', {
-        height: '0', // Hides the video display
-        width: '0',
-        videoId: youTubeVideoID, // Replace with your desired YouTube video ID
-        events: {
-            onReady: (event) => {
-                console.log('YouTube Player is ready');
-                event.target.playVideo();
-                initializeAudio();
-            },
-            onError: (event) => {
-                console.error('YouTube Player error:', event.data);
-            },
-        },
+// Handle YouTube input and fetch audio
+async function fetchAudio(videoId) {
+    const response = await fetch('/download-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
     });
+
+    if (response.ok) {
+        const { url } = await response.json();
+        return url;
+    } else {
+        console.error('Failed to fetch audio');
+    }
+}
+
+async function playAudio(videoId) {
+
+    console.log("PlayAudio(videoID)")
+    console.log('Fetching Audio URL');
+
+    if (audio) {
+        console.log('Stopping existing audio');
+        audio.pause();
+        audio.currentTime = 0;
+    }
+
+    const audioUrl = await fetchAudio(videoId);
+    if (!audioUrl) return;
+
+    audio = new Audio(audioUrl);
+    audio.crossOrigin = 'anonymous';
+    audio.play();
+
+    console.log("playing audio")
+
+    // Set up Web Audio API
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        
+        // Initialize the frequencyData array to match the analyser's frequencyBinCount
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    }
+    
+    const source = audioContext.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+    // Set up THREE.Audio for the scene
+    const listener = new THREE.AudioListener();
+    camera.add(listener);
+
+    sound = new THREE.Audio(listener);
+    audioLoader = new THREE.AudioLoader();
+    audioLoader.load(audioUrl, (buffer) => {
+        sound.setBuffer(buffer);
+    });
+}
+
+// Extract YouTube video ID from URL
+function getYouTubeVideoId(url) {
+    const regex = /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})|(?:https?:\/\/)?youtu\.be\/([a-zA-Z0-9_-]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] || match[2] : null;
+}
+
+const toggleAudio = () => {
+    console.log('Toggling audio');
+    const button = document.getElementById('play-pause');
+    if (!audio) {
+        console.log('No audio to toggle');
+
+        let confirmFetch = confirm('No audio is playing. Do you want to fetch audio?');
+        if (!confirmFetch) return;
+
+        console.log('Clicking fetch audio');
+
+        document.getElementById('fetch-audio').click();
+        return;
+    }
+    //audio.isPlaying ? audio.pause() : audio.play();
+    audio.paused ? audio.play() : audio.pause();
+    button.textContent = !audio.paused ? '⏸' : '▶';
 };
 
-YT.ready(function () {
-    console.log("YT.ready triggered");
-    youtubePlayer = new YT.Player("youtube-video", {
-        height: "0",
-        width: "0",
-        videoId: "sIwfYvruKKM",
-        events: {
-            onReady: (event) => {
-                console.log("YouTube Player is ready via YT.ready");
-                event.target.playVideo();
-                initializeAudio();
-            },
-        },
-    });
+document.getElementById('fetch-audio').addEventListener('click', async () => {
+    const input = document.getElementById('youtube-link');
+    const youtubeLink = input.value.trim();
+
+    const videoId = getYouTubeVideoId(youtubeLink);
+    if (!videoId) {
+        alert('Invalid YouTube URL');
+        return;
+    }
+
+    await playAudio(videoId);
+    const button = document.getElementById('play-pause');
+    button.textContent = !audio.paused ? '⏸' : '▶';
 });
 
+document.getElementById('play-pause').addEventListener('click', toggleAudio);
 
+// Detect dragging for OrbitControls
+window.addEventListener('mousedown', (event) => {
+    clientClickX = event.clientX;
+    clientClickY = event.clientY;
+});
 
-function initializeAudio() {
-    console.log('Initializing Audio');
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+window.addEventListener('mouseup', (event) => {
+    dragging = !(clientClickX === event.clientX && clientClickY === event.clientY);
+});
 
-    // Extract audio from the YouTube iframe
-    const mediaElement = youtubePlayer.getIframe();
-    const mediaElementSource = audioContext.createMediaElementSource(mediaElement);
-
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    frequencyData = new Uint8Array(analyser.frequencyBinCount);
-
-    mediaElementSource.connect(analyser);
-    analyser.connect(audioContext.destination);
-    console.log('Audio initialized');
-}
+window.addEventListener('click', (event) => {
+    if (event.target.tagName !== 'CANVAS') return; // Ignore non-canvas clicks
+    if (dragging) return; // Ignore drag events
+    toggleAudio();
+});
 
 
 
@@ -232,7 +259,7 @@ const clock = new THREE.Clock();
 
 function animate() { 
     //uniforms.u_frequency.value = analyser.getAverageFrequency();
-    if (analyser) {
+    if (analyser && frequencyData) {
         analyser.getByteFrequencyData(frequencyData);
         const averageFrequency = frequencyData.reduce((a, b) => a + b) / frequencyData.length;
         uniforms.u_frequency.value = averageFrequency;
