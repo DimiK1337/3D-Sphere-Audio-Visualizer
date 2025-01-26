@@ -21,8 +21,15 @@ app.post('/download-audio', async (req, res) => {
             return res.status(500).json({ error: 'Failed to download audio' });
         }
 
+        const videoInfo = JSON.parse(stdout);
+        const estimatedSizeMB = (videoInfo.filesize / 1024 / 1024).toFixed(2);
         console.log(`Audio downloaded: ${stdout}`);
-        res.json({ url: `/audio/${outputFileName}` });
+        res.json({ 
+            url: `/audio/${outputFileName}`,
+            title: videoInfo.title,
+            duration: videoInfo.duration,
+            size: estimatedSizeMB,
+        });
     });
 });
 
