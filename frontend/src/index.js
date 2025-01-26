@@ -29,12 +29,17 @@ const { composer: bloomComposer, bloomPass } = setupPostProcessing(
     scene, camera, renderer, params
 );
 
+let audio = null;
+let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
 window.analyser = null;
-window.audio = null;
+window.audio = audio;
 window.frequencyData = null;
 
 setupGUI(params, uniforms, bloomPass);
-setupControls(window.audio, window.analyser, window.frequencyData, camera);
+
+console.info("camera not null ?", camera)
+setupControls(audio, audioContext, window.analyser, window.frequencyData, camera);
 animate(uniforms, bloomComposer);
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
