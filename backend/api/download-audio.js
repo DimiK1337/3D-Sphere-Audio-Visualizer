@@ -1,5 +1,6 @@
 const express = require('express');
 const { exec } = require('child_process');
+const ytDlp = require('yt-dlp-exec'); // Import yt-dlp-exec
 const path = require('path');
 
 const router = express.Router();
@@ -12,6 +13,33 @@ router.post('/', async (req, res) => {
 
     const outputFileName = `audio_${videoId}.mp3`;
     const outputPath = path.resolve(__dirname, '..', 'downloads', outputFileName);
+
+    try {
+        const videoInfo = await ytDlp(`https://www.youtube.com/watch?v=${videoId}`, {
+            extractAudio: true,
+            audioFormat: 'mp3',
+            output: outputPath,
+            printJson: true, // Ensures we get JSON metadata in the response
+        });
+
+        const estimatedSizeMB = videoInfo.filesize 
+            ? (videoInfo.filesize / 1024 / 1024).toFixed(2)
+            : 'Unknown';
+
+        console.log(`Audio downloaded: ${outputFileName}`);
+        res.json({
+            url: `/audio/${outputFileName}`,
+            title: videoInfo.title,
+            duration: videoInfo.duration,
+            size: estimatedSizeMB,
+        });
+    }
+    catch (error) {
+        console.error(`Error downloading audio: ${error}`);
+        return res.status(500).json({ error: 'Failed to download audio' });
+    }
+
+    /*
 
     const command = `yt-dlp -x --audio-format mp3 --print-json -o "${outputPath}" https://www.youtube.com/watch?v=${videoId}`;
     exec(command, (error, stdout, stderr) => {
@@ -30,6 +58,10 @@ router.post('/', async (req, res) => {
             size: estimatedSizeMB,
         });
     });
+    */
+
+
+
 });
 
 module.exports = router;
