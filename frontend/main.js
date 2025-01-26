@@ -81,17 +81,25 @@ let clientClickX, clientClickY;
 
 // Handle YouTube input and fetch audio
 async function fetchAudio(videoId) {
+    const loadingIcon = document.getElementById('loading-icon');
+    loadingIcon.style.display = 'block';
+
+    console.log("Showing loading icon")
+
     const response = await fetch('/download-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoId }),
     });
 
+    loadingIcon.style.display = 'none';
+
     if (response.ok) {
         const { url } = await response.json();
         return url;
     } else {
         console.error('Failed to fetch audio');
+        return null;
     }
 }
 
