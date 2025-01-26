@@ -2,10 +2,9 @@ const express = require('express');
 const { exec } = require('child_process');
 const path = require('path');
 
-const app = express();
-app.use(express.json());
+const router = express.Router();
 
-app.post('/download-audio', async (req, res) => {
+router.post('/', async (req, res) => {
     const { videoId } = req.body;
     if (!videoId) {
         return res.status(400).json({ error: 'No video ID provided' });
@@ -14,7 +13,7 @@ app.post('/download-audio', async (req, res) => {
     const outputFileName = `audio_${videoId}.mp3`;
     const outputPath = path.resolve(__dirname, '..', 'downloads', outputFileName);
 
-    const command = `yt-dlp -x --audio-format mp3 -o "${outputPath}" https://www.youtube.com/watch?v=${videoId}`;
+    const command = `yt-dlp -x --audio-format mp3 --print-json -o "${outputPath}" https://www.youtube.com/watch?v=${videoId}`;
     exec(command, (error, stdout, stderr) => {
         if (error) {
             console.error(`Error downloading audio: ${stderr}`);
@@ -33,4 +32,4 @@ app.post('/download-audio', async (req, res) => {
     });
 });
 
-module.exports = app;
+module.exports = router;
