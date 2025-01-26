@@ -15,6 +15,7 @@
     "body-parser": "^1.20.3",
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "vercel": "^39.3.0"
+    "vercel": "^39.3.0",
+    "yt-dlp-exec": "^1.0.2"
   }
 }
